@@ -47,7 +47,7 @@ public class Controller implements Initializable {
         Socket socket = null;
         Scanner res;
         PrintWriter req;
-        text.setText("Hello");
+        text.setText("Hello, matching new players");
         try {
             socket = new Socket("127.0.0.1", 8848);
         }catch (Exception e){
@@ -79,22 +79,25 @@ public class Controller implements Initializable {
                     }
                     else if (temp.equals("win")){
                         text.setText(temp);
+                        TURN = false;
                         System.out.println("You win");
                     }else if(temp.equals("lose")){
                         text.setText(temp);
+                        TURN = false;
                         System.out.println("You lose");
                     }else if (temp.equals("draw")){
                         text.setText(temp);
+                        TURN = false;
                         System.out.println("Draw!");
                     }else if (temp.matches("^[0-2]+$")) {
                         str_board = temp;
                     }else {
-                        System.out.println(temp);
+                        System.out.println("");
                         text.setText(temp);
                         TURN = temp.length() != 7;
                     }
                 }
-
+                System.exit(0);
             }).start();
             req.println(str_board);
             req.flush();

@@ -40,6 +40,7 @@ public class ticThread extends Thread{
                 }else if ((step % 2) == 1){
                     System.out.println("Going 1");
                     sc = new Scanner(play1.getInputStream());
+                    if (!sc.hasNext()) break;
                     str_board = sc.next();
                     System.out.println(str_board + " 1");
                     StringBuilder sb = new StringBuilder();
@@ -57,6 +58,7 @@ public class ticThread extends Thread{
                         String temp = sc.next();
                     }
                     sc = new Scanner(play2.getInputStream());
+                    if (!sc.hasNext()) break;
                     str_board = sc.next();
                     System.out.println(str_board + " 2");
                     StringBuilder sb = new StringBuilder();
@@ -69,7 +71,11 @@ public class ticThread extends Thread{
                     System.out.println("Ending 2");
                 }
             }
+            Thread.sleep(1000);
+            System.exit(0);
         } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
