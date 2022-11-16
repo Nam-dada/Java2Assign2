@@ -1,5 +1,6 @@
 package application.controller;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.layout.Pane;
@@ -7,9 +8,16 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Controller implements Initializable {
     private static final int PLAY_1 = 1;
@@ -17,6 +25,10 @@ public class Controller implements Initializable {
     private static final int EMPTY = 0;
     private static final int BOUND = 90;
     private static final int OFFSET = 15;
+    private static int id = 1;
+
+    @FXML
+    private Text text = new Text();
 
     @FXML
     private Pane base_square;
@@ -27,22 +39,100 @@ public class Controller implements Initializable {
     private static boolean TURN = false;
 
     private static final int[][] chessBoard = new int[3][3];
+    public String str_board = "000000000";
     private static final boolean[][] flag = new boolean[3][3];
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        Socket socket = null;
+        Scanner res;
+        PrintWriter req;
+        text.setText("Hello");
+        try {
+            socket = new Socket("127.0.0.1", 8848);
+        }catch (Exception e){
+            System.out.println("Connect failed, please retry.");
+            System.exit(0);
+        }
+        try {
+            res = new Scanner(socket.getInputStream());
+            req = new PrintWriter(socket.getOutputStream());
+
+            Timer ti = new Timer();
+            TimerTask timerTask = new TimerTask() {
+                @Override
+                public void run() {
+                    Platform.runLater(()->{
+                        refreshAll(str_board);
+                    });
+                }
+            };
+            ti.schedule(timerTask, 100, 100);
+
+            new Thread(() -> {
+                while (res.hasNext()){
+                    String temp = res.next();
+                    System.out.println(temp);
+                    if (temp.matches("^id[1-2]$")){
+                        temp = temp.replace("id", "");
+                        id = Integer.parseInt(temp);
+                    }
+                    else if (temp.equals("win")){
+                        text.setText(temp);
+                        System.out.println("You win");
+                    }else if(temp.equals("lose")){
+                        text.setText(temp);
+                        System.out.println("You lose");
+                    }else if (temp.equals("draw")){
+                        text.setText(temp);
+                        System.out.println("Draw!");
+                    }else if (temp.matches("^[0-2]+$")) {
+                        str_board = temp;
+                    }else {
+                        System.out.println(temp);
+                        text.setText(temp);
+                        TURN = temp.length() != 7;
+                    }
+                }
+
+            }).start();
+            req.println(str_board);
+            req.flush();
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         game_panel.setOnMouseClicked(event -> {
             int x = (int) (event.getX() / BOUND);
             int y = (int) (event.getY() / BOUND);
             if (refreshBoard(x, y)) {
                 TURN = !TURN;
+                req.println(str_board);
+                req.flush();
             }
         });
     }
 
+    private void refreshAll(String str_brd){
+        char[] bd = str_brd.toCharArray();
+        int idx = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                chessBoard[i][j] = bd[idx] - '0';
+                idx++;
+            }
+        }
+        drawChess();
+    }
+
     private boolean refreshBoard (int x, int y) {
-        if (chessBoard[x][y] == EMPTY) {
-            chessBoard[x][y] = TURN ? PLAY_1 : PLAY_2;
+        if (chessBoard[x][y] == EMPTY && TURN) {
+            chessBoard[x][y] = id;
+            StringBuilder sb = new StringBuilder(str_board);
+            int idx = x*3 + y;
+            sb.replace(idx, idx+1, String.valueOf(id));
+            str_board = sb.toString();
             drawChess();
             return true;
         }
